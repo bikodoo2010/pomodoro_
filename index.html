@@ -369,6 +369,53 @@
       .bottom-grid { grid-template-columns: 1fr; }
       .viewer-stage { padding: 8px; }
     }
+    /* ---------- Адаптивный PDF-просмотрщик ---------- */
+    .viewer-stage {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
+    }
+    .viewer-stage canvas {
+      max-width: none;
+      flex: 0 0 auto;
+    }
+    .doc-viewer.pdf-fullscreen {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      border: 0;
+      border-radius: 0;
+      background: var(--panel);
+    }
+    .doc-viewer.pdf-fullscreen .viewer-stage {
+      min-height: 0;
+    }
+    @media (max-width: 780px) {
+      .docs-panel { padding: 10px; }
+      .docs-body { grid-template-columns: 1fr; gap: 8px; }
+      .doc-list { max-height: 150px; }
+      .doc-viewer { width: 100%; }
+      .viewer-bar {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 7px;
+        gap: 5px;
+      }
+      .viewer-bar .wide {
+        min-height: 32px;
+        padding-inline: 7px;
+      }
+      .viewer-stage {
+        min-height: calc(100dvh - 190px);
+        padding: 8px;
+      }
+    }
+
+    .viewer-stage { touch-action: pan-x pan-y; }
+    .doc-viewer.pdf-fullscreen .viewer-bar { padding: 8px 10px; }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
   </style>
 </head>
@@ -448,6 +495,7 @@
               </div>
               <button class="icon-button wide" id="mentionDoc" title="Вставить упоминание в заметки" disabled>@ в заметки</button>
               <button class="icon-button wide" id="openTab" title="Открыть в новой вкладке" disabled>В новой вкладке</button>
+              <button class="icon-button wide" id="fullscreenPdf" aria-pressed="false" title="Во весь экран" disabled>Во весь экран</button>
             </div>
             <div class="viewer-stage" id="pdfStage">
               <canvas id="pdfCanvas" hidden></canvas>
@@ -734,7 +782,7 @@
 
       /* ---------- Документы: просмотр ---------- */
       const stage = $('pdfStage'), canvas = $('pdfCanvas'), frame = $('pdfFrame');
-      const viewerButtons = ['prevPage', 'nextPage', 'pageInput', 'zoomOut', 'zoomIn', 'zoomFit', 'mentionDoc', 'openTab'];
+      const viewerButtons = ['prevPage', 'nextPage', 'pageInput', 'zoomOut', 'zoomIn', 'zoomFit', 'mentionDoc', 'openTab', 'fullscreenPdf'];
       let pdfDoc = null, pdfPage = 1, pdfScale = 'fit', curScale = 1, loadToken = 0, renderTask = null, frameUrl = null, renderQueued = false, rendering = false;
       const hasPdfJs = () => typeof window.pdfjsLib !== 'undefined';
       if (hasPdfJs()) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -802,7 +850,7 @@
             const scale = pdfScale === 'fit' ? Math.max(.3, (stage.clientWidth - 32) / base.width) : pdfScale;
             curScale = scale;
             const viewport = page.getViewport({ scale });
-            const ratio = window.devicePixelRatio || 1;
+            const ratio = Math.min(window.devicePixelRatio || 1, 2);
             canvas.width = Math.floor(viewport.width * ratio); canvas.height = Math.floor(viewport.height * ratio);
             canvas.style.width = `${Math.floor(viewport.width)}px`; canvas.style.height = `${Math.floor(viewport.height)}px`;
             const ctx = canvas.getContext('2d');
@@ -820,6 +868,30 @@
       $('zoomFit').addEventListener('click', () => { pdfScale = 'fit'; scheduleRender(); });
       $('openTab').addEventListener('click', () => { const rec = docs.find(d => d.id === state.doc); if (!rec) return; const url = URL.createObjectURL(rec.blob); window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
       let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (pdfDoc && pdfScale === 'fit') scheduleRender(); }, 150); });
+      function setPdfFullscreen(on) {
+        const viewer = $('docViewer');
+        viewer.classList.toggle('pdf-fullscreen', on);
+        $('fullscreenPdf').setAttribute('aria-pressed', String(on));
+        $('fullscreenPdf').textContent = on ? 'Закрыть' : 'Во весь экран';
+        document.body.style.overflow = on ? 'hidden' : '';
+        if (pdfDoc && pdfScale === 'fit') setTimeout(scheduleRender, 60);
+      }
+      $('fullscreenPdf').addEventListener('click', () => setPdfFullscreen(!$('docViewer').classList.contains('pdf-fullscreen')));
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && $('docViewer').classList.contains('pdf-fullscreen')) setPdfFullscreen(false); });
+      // Масштаб двумя пальцами
+      let pinch = null;
+      const touchDist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      stage.addEventListener('touchstart', (event) => {
+        if (!pdfDoc || event.touches.length !== 2) return;
+        pinch = { d: touchDist(event.touches), s: curScale };
+      }, { passive: true });
+      stage.addEventListener('touchmove', (event) => {
+        if (!pinch || event.touches.length !== 2) return;
+        event.preventDefault();
+        pdfScale = Math.min(4, Math.max(.3, pinch.s * touchDist(event.touches) / pinch.d));
+        scheduleRender();
+      }, { passive: false });
+      ['touchend', 'touchcancel'].forEach(name => stage.addEventListener(name, () => { pinch = null; }));
       $('docViewer').addEventListener('keydown', (event) => {
         if (!pdfDoc || event.target.tagName === 'INPUT') return;
         if (event.key === 'ArrowLeft' || event.key === 'PageUp') { event.preventDefault(); gotoPage(pdfPage - 1); }

@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="ru" data-theme="paper">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f1ea" />
+  <title>stillroom — комната для фокуса</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;650;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <script>
+    /* Применяем тему до отрисовки, чтобы не было вспышки. */
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('stillroom-state-v1') || '{}');
+        var t = s.theme || 'paper';
+        if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'paper';
+        document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    /* ---------- Темы ---------- */
+    :root, [data-theme="paper"] {
+      color-scheme: light;
+      --bg: #f4f1ea; --panel: #fffdfa; --panel-2: #f5f1e8; --line: #d9d4c9;
+      --text: #252722; --muted: #65675e; --quiet: #8b8c84;
+      --accent: #252722; --accent-hover: #41423c; --on-accent: #fffdfa;
+      --mint: #4d7660; --coral: #a45f48; --gold: #866c37;
+      --mark-task: rgba(77, 118, 96, .2); --mark-doc: rgba(164, 95, 72, .2);
+      --art: #efebe2; --shadow: rgba(52, 48, 39, .18);
+    }
+    [data-theme="night"] {
+      color-scheme: dark;
+      --bg: #17182b; --panel: #222439; --panel-2: #2b2d46; --line: rgba(239, 236, 249, .12);
+      --text: #f2ede4; --muted: #b0b0c4; --quiet: #8084a3;
+      --accent: #b5a7ff; --accent-hover: #c9bfff; --on-accent: #232037;
+      --mint: #a5d8c4; --coral: #f2a58a; --gold: #e9c98a;
+      --mark-task: rgba(165, 216, 196, .22); --mark-doc: rgba(242, 165, 138, .22);
+      --art: #2f3150; --shadow: rgba(0, 0, 0, .5);
+    }
+    [data-theme="sage"] {
+      color-scheme: light;
+      --bg: #e6ede6; --panel: #f6f9f4; --panel-2: #e9f0e8; --line: #cbd8cb;
+      --text: #1f2d25; --muted: #566a5d; --quiet: #84978b;
+      --accent: #3f6b53; --accent-hover: #335644; --on-accent: #f6f9f4;
+      --mint: #3f6b53; --coral: #a4624a; --gold: #7f6a30;
+      --mark-task: rgba(63, 107, 83, .2); --mark-doc: rgba(164, 98, 74, .2);
+      --art: #dbe7dc; --shadow: rgba(31, 45, 37, .18);
+    }
+    [data-theme="sepia"] {
+      color-scheme: light;
+      --bg: #eddfc8; --panel: #f8efdd; --panel-2: #f0e3cc; --line: #d8c6a6;
+      --text: #3b2f22; --muted: #6f5d48; --quiet: #98846b;
+      --accent: #8a4b2a; --accent-hover: #6f3b20; --on-accent: #f8efdd;
+      --mint: #5a7048; --coral: #8a4b2a; --gold: #8a6a22;
+      --mark-task: rgba(90, 112, 72, .22); --mark-doc: rgba(138, 75, 42, .2);
+      --art: #e8d8bb; --shadow: rgba(59, 47, 34, .2);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-width: 320px; min-height: 100vh;
+      background: var(--bg); color: var(--text);
+      font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      transition: background .25s, color .25s;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px;
+    }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    /* ---------- Каркас ---------- */
+    .app { min-height: 100vh; display: grid; grid-template-columns: 64px minmax(0, 1fr); }
+    .rail { border-right: 1px solid var(--line); padding: 17px 8px; display: flex; align-items: center; flex-direction: column; gap: 15px; background: var(--panel); }
+    .brand-mark { width: 34px; height: 34px; border-radius: 3px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .rail-nav { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+    .rail-button { border: 0; background: transparent; color: var(--quiet); cursor: pointer; display: grid; place-items: center; width: 40px; height: 40px; margin: auto; border-radius: 3px; transition: color .2s, background .2s; }
+    .rail-button:hover { background: var(--panel-2); color: var(--text); }
+    .rail-button.active { color: var(--on-accent); background: var(--accent); }
+    .rail-button svg { width: 18px; height: 18px; }
+    .rail-spacer { flex: 1; }
+    .avatar { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 3px; display: grid; place-items: center; color: var(--text); font-size: 12px; }
+    .main { max-width: 1240px; width: 100%; padding: 24px 30px 30px; margin: 0 auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+    .wordmark h1 { font-family: "Instrument Serif", Georgia, serif; font-size: 23px; font-weight: 400; letter-spacing: -.02em; margin: 0; }
+    .wordmark small { display: block; color: var(--quiet); font-size: 10px; margin-top: 2px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .date-line { color: var(--muted); font-size: 11px; }
+    .icon-button { border: 1px solid var(--line); background: transparent; cursor: pointer; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 3px; color: var(--muted); transition: all .2s; }
+    .icon-button:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
+    .icon-button:disabled { opacity: .4; cursor: default; }
+    .icon-button svg { width: 16px; height: 16px; }
+
+    /* Выбор темы */
+    .theme-switch { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 999px; }
+    .theme-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.22); cursor: pointer; padding: 0; position: relative; transition: transform .15s; }
+    .theme-dot:hover { transform: scale(1.12); }
+    .theme-dot[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--text); }
+    .theme-dot[data-theme-pick="paper"] { background: linear-gradient(135deg, #fffdfa 50%, #f4f1ea 50%); }
+    .theme-dot[data-theme-pick="night"] { background: linear-gradient(135deg, #3a3c60 50%, #17182b 50%); }
+    .theme-dot[data-theme-pick="sage"] { background: linear-gradient(135deg, #cfe0d1 50%, #3f6b53 50%); }
+    .theme-dot[data-theme-pick="sepia"] { background: linear-gradient(135deg, #f0e3cc 50%, #8a4b2a 50%); }
+    .theme-dot[data-theme-pick="auto"] { background: linear-gradient(90deg, #fffdfa 50%, #17182b 50%); }
+
+    .page-intro { margin: 0 0 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .page-intro h2 { font-family: "Instrument Serif", Georgia, serif; font-size: clamp(30px, 3vw, 40px); font-weight: 400; letter-spacing: -.025em; margin: 0; }
+    .page-intro p { margin: 7px 0 0; font-size: 12px; color: var(--muted); }
+    .streak { display: flex; align-items: center; gap: 8px; color: var(--gold); font-size: 10px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 3px; }
+    .streak svg { width: 16px; height: 16px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(290px, .82fr); gap: 12px; align-items: stretch; }
+    .panel, .side-panel { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 16px; }
+    .focus-panel { position: relative; min-height: 535px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 20px clamp(18px, 3vw, 38px); display: flex; flex-direction: column; align-items: center; }
+    .focus-head { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px; }
+    .eyebrow { font-size: 10px; color: var(--quiet); }
+    .mode-switch { display: flex; border: 1px solid var(--line); border-radius: 3px; }
+    .mode-button { border: 0; background: transparent; color: var(--quiet); padding: 6px 8px; font-size: 10px; cursor: pointer; white-space: nowrap; transition: .2s; }
+    .mode-button + .mode-button { border-left: 1px solid var(--line); }
+    .mode-button:hover { color: var(--text); background: var(--panel-2); }
+    .mode-button[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
+    .timer-wrap { position: relative; width: min(280px, 70vw); aspect-ratio: 1; margin: 23px 0 8px; display: grid; place-items: center; }
+    .timer-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+    .timer-track { fill: none; stroke: var(--line); stroke-width: 2; }
+    .timer-progress { fill: none; stroke: var(--accent); stroke-width: 2.1; stroke-linecap: round; transition: stroke-dashoffset .45s linear, stroke .35s; }
+    .timer-content { display: flex; align-items: center; flex-direction: column; }
+    .timer-label { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+    .time { font-family: "Instrument Serif", Georgia, serif; font-size: clamp(72px, 8.6vw, 98px); line-height: .95; letter-spacing: -.035em; font-variant-numeric: tabular-nums; font-weight: 400; color: var(--text); }
+    .timer-sub { margin-top: 10px; font-size: 10px; color: var(--quiet); }
+    .session-controls { display: flex; align-items: center; gap: 10px; }
+    .control-quiet { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); background: transparent; cursor: pointer; transition: .2s; }
+    .control-quiet:hover { border-color: var(--text); color: var(--text); }
+    .control-quiet svg { width: 17px; height: 17px; }
+    .start-button { min-width: 132px; border: 0; border-radius: 3px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 650; padding: 11px 18px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 9px; transition: background .2s; }
+    .start-button:hover { background: var(--accent-hover); }
+    .start-button svg { width: 15px; height: 15px; }
+    .focus-divider { width: min(410px, 100%); height: 1px; background: var(--line); margin: 19px 0 13px; }
+    .current-task { text-align: center; max-width: 460px; }
+    .current-task small { color: var(--quiet); font-size: 9px; }
+    .current-task p { margin: 6px 0 0; font-size: 13px; }
+    .cycles { display: flex; align-items: center; gap: 7px; margin-top: 16px; }
+    .cycle-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+    .cycle-dot.done { background: var(--mint); }
+    .cycle-copy { color: var(--quiet); font-size: 9px; margin-left: 4px; }
+
+    .side-column { display: flex; flex-direction: column; gap: 12px; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .panel-heading h3 { font-family: "Instrument Serif", Georgia, serif; font-size: 18px; font-weight: 400; margin: 0; }
+    .panel-heading p { color: var(--quiet); font-size: 9px; margin: 4px 0 0; }
+    .text-button { border: 0; background: transparent; color: var(--text); font-size: 10px; padding: 4px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+    .text-button:hover { color: var(--coral); }
+
+    .task-list { display: flex; flex-direction: column; gap: 5px; }
+    .task-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 7px 4px; border-radius: 2px; transition: background .18s; }
+    .task-row .task-time { margin-right: 4px; }
+    .task-act { border: 0; background: transparent; color: var(--quiet); cursor: pointer; width: 22px; height: 22px; border-radius: 3px; font-size: 12px; line-height: 1; opacity: 0; transition: opacity .15s, color .15s; }
+    .task-row:hover .task-act, .task-act:focus-visible { opacity: 1; }
+    .task-act:hover { color: var(--text); }
+    .task-act.rm:hover { color: var(--coral); }
+    @media (hover: none) { .task-act { opacity: 1; } }
+    .task-row:hover, .task-row.selected { background: var(--panel-2); }
+    .task-check { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1px solid var(--quiet); border-radius: 2px; margin: 0; cursor: pointer; display: grid; place-items: center; background: transparent; }
+    .task-check:checked { background: var(--accent); border-color: var(--accent); }
+    .task-check:checked::after { content: ""; width: 7px; height: 4px; border-left: 1.5px solid var(--on-accent); border-bottom: 1.5px solid var(--on-accent); transform: rotate(-45deg) translate(1px, -1px); }
+    .task-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+    .task-row.completed .task-name { color: var(--quiet); text-decoration: line-through; }
+    .task-time { font-size: 10px; color: var(--quiet); }
+    .task-select { border: 0; padding: 0; background: transparent; text-align: left; cursor: pointer; min-width: 0; overflow: hidden; }
+    .add-task { width: 100%; margin-top: 8px; display: flex; gap: 9px; align-items: center; border: 1px solid var(--line); color: var(--muted); background: transparent; border-radius: 3px; padding: 8px; cursor: pointer; font-size: 11px; text-align: left; transition: .2s; }
+    .add-task:hover { border-color: var(--text); color: var(--text); }
+    .add-task span { color: var(--text); font-size: 16px; line-height: 10px; }
+
+    .live-tag { color: var(--mint); font-size: 9px; border: 1px solid var(--line); padding: 5px 8px; border-radius: 3px; display: flex; align-items: center; gap: 6px; }
+    .live-dot { width: 5px; height: 5px; background: var(--mint); border-radius: 50%; }
+    .station-art { min-height: 66px; border: 1px solid var(--line); border-radius: 3px; margin-bottom: 14px; display: flex; align-items: end; padding: 10px; background: var(--art); }
+    .art-caption { font-family: "Instrument Serif", Georgia, serif; font-size: 19px; }
+    .music-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .track-title { font-size: 12px; margin: 0; }
+    .track-subtitle { font-size: 10px; color: var(--quiet); margin: 4px 0 0; }
+    .equalizer { display: flex; align-items: center; gap: 2px; height: 17px; color: var(--mint); }
+    .equalizer i { width: 2px; border-radius: 2px; height: 5px; background: currentColor; opacity: .8; }
+    .equalizer.playing i:nth-child(1) { animation: wave .55s ease-in-out infinite alternate; }
+    .equalizer.playing i:nth-child(2) { animation: wave .72s .1s ease-in-out infinite alternate; }
+    .equalizer.playing i:nth-child(3) { animation: wave .48s .18s ease-in-out infinite alternate; }
+    .equalizer.playing i:nth-child(4) { animation: wave .82s .04s ease-in-out infinite alternate; }
+    @keyframes wave { to { transform: scaleY(2.4); opacity: .55; } }
+    .player-controls { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 11px 0 8px; }
+    .player-button { background: transparent; border: 0; color: var(--muted); padding: 5px; display: grid; place-items: center; cursor: pointer; transition: .18s; }
+    .player-button:hover { color: var(--text); }
+    .player-button svg { width: 16px; height: 16px; }
+    .player-button.main-play { width: 33px; height: 33px; border-radius: 3px; background: var(--accent); color: var(--on-accent); }
+    .player-button.main-play svg { width: 14px; height: 14px; }
+    .volume-row { display: flex; align-items: center; gap: 9px; color: var(--quiet); }
+    .volume-row svg { width: 14px; height: 14px; flex: 0 0 auto; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 3px; cursor: pointer; }
+    .station-select { width: 100%; margin-top: 9px; padding: 9px 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 10px; }
+    .audio-note { color: var(--quiet); font-size: 9px; line-height: 1.5; margin: 8px 0 0; }
+
+    /* Заметки с упоминаниями */
+    .notes-panel { flex: 1; min-height: 124px; display: flex; flex-direction: column; position: relative; }
+    .notes-panel .panel-heading { margin-bottom: 8px; }
+    .notes-saved { color: var(--quiet); font-size: 9px; }
+    .notes-wrap { position: relative; height: 130px; }
+    .notes-backdrop, .notes-area {
+      position: absolute; inset: 0; margin: 0; padding: 7px 9px;
+      border: 1px solid var(--line); border-radius: 3px;
+      font-family: inherit; font-size: 12px; line-height: 1.6; letter-spacing: normal;
+      white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
+      overflow-y: scroll; overflow-x: hidden;
+    }
+    .notes-backdrop { color: transparent; pointer-events: none; background: var(--panel); scrollbar-color: transparent transparent; }
+    .notes-backdrop::-webkit-scrollbar-thumb { background: transparent; }
+    .notes-backdrop mark { color: transparent; border-radius: 3px; }
+    .notes-backdrop mark.task { background: var(--mark-task); }
+    .notes-backdrop mark.doc { background: var(--mark-doc); }
+    .notes-area { background: transparent; color: var(--text); resize: none; outline: 0; }
+    .notes-area:focus { border-color: var(--text); }
+    .notes-area::placeholder { color: var(--quiet); }
+    .mention-pop { position: absolute; left: 16px; right: 16px; z-index: 6; background: var(--panel); border: 1px solid var(--text); border-radius: 4px; box-shadow: 0 10px 30px var(--shadow); padding: 4px; max-height: 210px; overflow: auto; }
+    .mention-item { width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; padding: 7px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+    .mention-item[aria-selected="true"], .mention-item:hover { background: var(--panel-2); }
+    .mention-item .kind { font-size: 8px; letter-spacing: .04em; text-transform: uppercase; padding: 2px 5px; border-radius: 2px; flex: 0 0 auto; }
+    .mention-item .kind.task { background: var(--mark-task); color: var(--mint); }
+    .mention-item .kind.doc { background: var(--mark-doc); color: var(--coral); }
+    .mention-item .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mention-hint { color: var(--quiet); font-size: 9px; margin: 7px 0 0; }
+    .mention-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 9px; font-size: 10px; cursor: pointer; max-width: 100%; transition: .15s; }
+    .chip:hover { border-color: var(--text); }
+    .chip .kind { font-size: 8px; text-transform: uppercase; letter-spacing: .04em; }
+    .chip.task .kind { color: var(--mint); }
+    .chip.doc .kind { color: var(--coral); }
+    .chip .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+
+    /* Неделя */
+    .week-panel { margin-top: 12px; }
+    .week-total { color: var(--quiet); font-size: 10px; }
+    .week-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; height: 130px; }
+    .week-col { display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; min-width: 0; }
+    .week-val { font-size: 9px; color: var(--muted); height: 11px; }
+    .week-track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+    .week-bar { width: 100%; max-width: 40px; background: var(--accent); opacity: .7; border-radius: 2px 2px 0 0; min-height: 2px; transition: height .3s; }
+    .week-col.empty .week-bar { background: var(--line); opacity: 1; }
+    .week-col.today .week-bar { opacity: 1; }
+    .week-col small { font-size: 9px; color: var(--quiet); text-transform: capitalize; }
+    .week-col.today small { color: var(--text); font-weight: 650; }
+    .setting-row input[type="checkbox"] { width: 18px; height: 18px; padding: 0; accent-color: var(--accent); }
+    .setting-row .row-actions { display: flex; gap: 10px; }
+
+    /* Источники музыки: радио / YouTube / Spotify */
+    .source-switch { display: flex; border: 1px solid var(--line); border-radius: 3px; margin-bottom: 12px; }
+    .source-tab { flex: 1; border: 0; background: transparent; color: var(--quiet); padding: 7px 6px; font-size: 10px; cursor: pointer; transition: .2s; }
+    .source-tab + .source-tab { border-left: 1px solid var(--line); }
+    .source-tab:hover { color: var(--text); background: var(--panel-2); }
+    .source-tab[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
+    .embed-add { display: flex; gap: 6px; align-items: center; }
+    .embed-add input { flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); color: var(--text); font-size: 11px; }
+    .embed-add input::placeholder { color: var(--quiet); }
+    .embed-add button { white-space: nowrap; }
+    .embed-error { color: var(--coral); font-size: 10px; margin: 7px 0 0; }
+    .embed-stage { margin-top: 10px; }
+    .embed-stage:empty { display: none; }
+    .embed-frame { display: block; width: 100%; border: 1px solid var(--line); border-radius: 4px; background: var(--panel-2); }
+    .embed-frame.yt { aspect-ratio: 16 / 9; height: auto; }
+    .embed-frame.sp { height: 352px; }
+    .embed-frame.sp.xl { height: 520px; }
+    .embed-frame.sp.tall { height: 480px; }
+    .embed-frame.sp.tall.xl { height: 680px; }
+    .embed-actions { display: flex; align-items: center; gap: 14px; margin-top: 7px; flex-wrap: wrap; }
+    .embed-open { display: inline-block; font-size: 10px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+    .embed-size { padding: 0; color: var(--muted); }
+    .embed-open:hover { color: var(--text); }
+    .embed-list { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; max-height: 170px; overflow: auto; }
+    .embed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-radius: 2px; }
+    .embed-row:hover, .embed-row.active { background: var(--panel-2); }
+    .embed-pick { border: 0; background: transparent; text-align: left; padding: 7px 6px; cursor: pointer; font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .embed-row.active .embed-pick { font-weight: 600; }
+    .embed-del { border: 0; background: transparent; color: var(--quiet); cursor: pointer; width: 26px; height: 26px; border-radius: 3px; font-size: 15px; line-height: 1; }
+    .embed-del:hover { color: var(--coral); }
+    .embed-empty { color: var(--quiet); font-size: 10px; line-height: 1.6; padding: 6px; }
+
+    /* ---------- Документы / PDF ---------- */
+    .docs-panel { margin-top: 12px; padding: 16px; }
+    .docs-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px; min-height: 620px; }
+    .doc-list { display: flex; flex-direction: column; gap: 4px; align-content: start; border: 1px solid var(--line); border-radius: 4px; padding: 6px; overflow: auto; max-height: 700px; }
+    .doc-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; border-radius: 3px; }
+    .doc-item.active, .doc-item:hover { background: var(--panel-2); }
+    .doc-open { border: 0; background: transparent; text-align: left; cursor: pointer; padding: 8px; min-width: 0; }
+    .doc-open b { display: block; font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-open small { color: var(--quiet); font-size: 9px; }
+    .doc-del { border: 0; background: transparent; color: var(--quiet); cursor: pointer; width: 26px; height: 26px; border-radius: 3px; font-size: 15px; line-height: 1; }
+    .doc-del:hover { color: var(--coral); background: var(--panel); }
+    .doc-empty { color: var(--quiet); font-size: 10px; line-height: 1.6; padding: 12px 8px; }
+    .doc-viewer { border: 1px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; outline: 0; }
+    .viewer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); background: var(--panel); }
+    .viewer-title { font-size: 11px; font-weight: 600; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 36%; color: var(--muted); }
+    .viewer-bar .icon-button { width: 28px; height: 28px; font-size: 14px; line-height: 1; }
+    .viewer-bar .wide { width: auto; padding: 0 9px; font-size: 10px; }
+    .page-box { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); }
+    .page-box input { width: 46px; text-align: center; padding: 5px 4px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); color: var(--text); font-size: 11px; }
+    .doc-viewer.native .page-controls { display: none; }
+    .viewer-stage { position: relative; flex: 1; min-height: 540px; overflow: auto; background: var(--panel-2); padding: 16px; display: flex; justify-content: center; align-items: flex-start; }
+    .viewer-stage canvas { display: block; background: #fff; box-shadow: 0 4px 22px var(--shadow); max-width: none; }
+    .viewer-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+    .viewer-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--quiet); font-size: 11px; line-height: 1.7; padding: 24px; }
+    .viewer-empty b { display: block; font-family: "Instrument Serif", Georgia, serif; font-size: 22px; font-weight: 400; color: var(--text); margin-bottom: 4px; }
+    .docs-panel.dragging { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+
+    .bottom-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .mini-stat { display: flex; align-items: center; gap: 10px; min-height: 66px; }
+    .stat-icon { width: 29px; height: 29px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 3px; background: var(--panel-2); color: var(--text); }
+    .stat-icon.mint { color: var(--mint); }
+    .stat-icon.gold { color: var(--gold); }
+    .stat-icon svg { width: 17px; height: 17px; }
+    .stat-label { color: var(--quiet); font-size: 10px; }
+    .stat-value { font-size: 19px; margin-top: 4px; font-family: "Instrument Serif", Georgia, serif; }
+
+    .toast { position: fixed; left: 50%; bottom: 25px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; z-index: 20; color: var(--bg); background: var(--text); border-radius: 3px; padding: 11px 16px; font-size: 12px; transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px); }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    dialog { width: min(430px, calc(100vw - 32px)); color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 23px; box-shadow: 0 20px 60px var(--shadow); }
+    dialog::backdrop { background: rgba(8, 9, 18, .55); backdrop-filter: blur(4px); }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .dialog-head h3 { margin: 0; font: 400 24px "Instrument Serif", Georgia, serif; }
+    .settings-grid { display: grid; gap: 12px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
+    .setting-row input { width: 75px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); color: var(--text); text-align: center; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+    .dialog-actions button { border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 3px; padding: 9px 13px; cursor: pointer; font-size: 11px; }
+    .dialog-actions .save-settings { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: 650; }
+
+    @media (max-width: 1020px) {
+      .main { padding: 24px; }
+      .workspace { grid-template-columns: minmax(0, 1fr) 310px; }
+      .focus-panel { padding-inline: 22px; }
+      .mode-button { padding-inline: 7px; }
+    }
+    @media (max-width: 780px) {
+      .app { grid-template-columns: 1fr; }
+      .rail { position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; height: 62px; border-right: 0; border-top: 1px solid var(--line); padding: 6px 15px; flex-direction: row; justify-content: center; }
+      .brand-mark, .rail-spacer, .avatar { display: none; }
+      .rail-nav { flex-direction: row; justify-content: space-around; max-width: 400px; }
+      .rail-button { width: 44px; height: 44px; }
+      .main { padding: 20px 18px 88px; }
+      .workspace { grid-template-columns: 1fr; }
+      .side-column { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+      .notes-panel, .music-panel { grid-column: 1 / -1; }
+      .embed-frame.sp { height: 400px; }
+      .embed-frame.sp.xl { height: 560px; }
+      .embed-frame.sp.tall { height: 540px; }
+      .embed-frame.sp.tall.xl { height: 720px; }
+      .bottom-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .docs-body { grid-template-columns: 1fr; min-height: 0; }
+      .doc-list { max-height: 190px; }
+      .viewer-stage { min-height: 480px; }
+      .viewer-title { max-width: 100%; flex-basis: 100%; }
+    }
+    @media (max-width: 520px) {
+      .main { padding: 17px 13px 82px; }
+      .date-line { display: none; }
+      .topbar { flex-wrap: wrap; }
+      .focus-head { flex-direction: column; align-items: center; gap: 13px; }
+      .focus-panel { min-height: 505px; }
+      .time { font-size: 78px; }
+      .side-column { grid-template-columns: 1fr; }
+      .bottom-grid { grid-template-columns: 1fr; }
+      .viewer-stage { padding: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail" aria-label="Главная навигация">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5c-4.7 0-7.8 3.4-7.8 8.4s3.1 8.6 7.8 8.6 7.8-3.6 7.8-8.6S16.7 3.5 12 3.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 7.5v4.7l3.2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+      <nav class="rail-nav">
+        <button class="rail-button active" aria-label="Фокус" title="Фокус" data-scroll="focus"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg></button>
+        <button class="rail-button" aria-label="Задачи" title="Задачи" data-scroll="tasks"><svg viewBox="0 0 24 24" fill="none"><path d="M8 6h12M8 12h12M8 18h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="m3.5 6 .8.8 1.7-1.7m-2.5 6.9.8.8 1.7-1.7m-2.5 6.9.8.8 1.7-1.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="rail-button" aria-label="Документы" title="Документы" data-scroll="docs"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 3.5V8h4M9.5 12.5h5M9.5 15.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="rail-button" aria-label="Музыка" title="Музыка" data-scroll="music"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" stroke="currentColor" stroke-width="1.5"/><ellipse cx="17" cy="16" rx="3" ry="2.2" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      </nav>
+      <div class="rail-spacer"></div><div class="avatar" aria-label="Профиль">s.</div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="wordmark"><h1>stillroom</h1><small>таймер, задачи, документы и музыка</small></div>
+        <div class="top-actions">
+          <span class="date-line" id="dateLine"></span>
+          <div class="theme-switch" role="group" aria-label="Тема оформления">
+            <button class="theme-dot" data-theme-pick="paper" aria-pressed="true" aria-label="Тема «Бумага»" title="Бумага"></button>
+            <button class="theme-dot" data-theme-pick="night" aria-pressed="false" aria-label="Тема «Ночь»" title="Ночь"></button>
+            <button class="theme-dot" data-theme-pick="sage" aria-pressed="false" aria-label="Тема «Шалфей»" title="Шалфей"></button>
+            <button class="theme-dot" data-theme-pick="sepia" aria-pressed="false" aria-label="Тема «Сепия»" title="Сепия"></button>
+            <button class="theme-dot" data-theme-pick="auto" aria-pressed="false" aria-label="Как в системе" title="Как в системе"></button>
+          </div>
+          <button class="icon-button" id="settingsButton" aria-label="Настройки таймера" title="Настройки"><svg viewBox="0 0 24 24" fill="none"><path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" stroke="currentColor" stroke-width="1.5"/><path d="m19.4 13.5 1.1.9-1.1 1.9-1.4-.5a7.5 7.5 0 0 1-1.5.9l-.3 1.5h-2.2l-.4-1.5a7.7 7.7 0 0 1-1.6-.1l-1 1.2-1.9-1.1.5-1.5a7 7 0 0 1-.9-1.4l-1.5-.3v-2.2l1.5-.4c.1-.5.4-1 .7-1.4l-.5-1.5 1.9-1.1 1.1 1.2c.5-.1 1.1-.2 1.6-.1l.4-1.5h2.2l.3 1.5c.5.2 1 .5 1.5.9l1.4-.5 1.1 1.9-1.1.9c.1.5.1 1 0 1.5Z" transform="translate(-1 -1)" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg></button>
+        </div>
+      </header>
+      <section class="page-intro"><div><h2>Сделай одну важную вещь.</h2><p>Выбери задачу, запусти 25 минут и убери лишнее.</p></div><div class="streak" title="Дней с фокус-сессией подряд"><svg viewBox="0 0 24 24" fill="none"><path d="M12.2 21c4.2 0 7-2.9 7-6.8 0-2.9-1.6-4.6-3.6-6.3.2 2-1 3.4-2.4 3.9.5-3.9-1.4-7.2-4.6-9.3.5 4.1-4 6.5-4 11.4 0 4.2 3.1 7.1 7.6 7.1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span><b id="streakCount">0</b> <span id="streakWord">дней подряд</span></span></div></section>
+
+      <section class="workspace">
+        <section class="focus-panel" id="focus" aria-label="Таймер Pomodoro">
+          <div class="focus-head"><span class="eyebrow" id="sessionCount">сессия 01 · сегодня</span><div class="mode-switch" role="group" aria-label="Режим таймера"><button class="mode-button" data-mode="focus" aria-pressed="true">Фокус</button><button class="mode-button" data-mode="short" aria-pressed="false">Короткий отдых</button><button class="mode-button" data-mode="long" aria-pressed="false">Длинный отдых</button></div></div>
+          <div class="timer-wrap" aria-live="off"><svg class="timer-svg" viewBox="0 0 100 100" aria-hidden="true"><circle class="timer-track" cx="50" cy="50" r="47"/><circle class="timer-progress" id="timerProgress" cx="50" cy="50" r="47"/></svg><div class="timer-content"><span class="timer-label" id="timerLabel">фокус на выбранной задаче</span><time class="time" id="timeDisplay">25:00</time><span class="timer-sub" id="timerSub">до конца сессии</span></div></div>
+          <div class="session-controls"><button class="control-quiet" id="resetButton" aria-label="Сбросить таймер" title="Сбросить"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 11a7.5 7.5 0 1 1 1.7 5.2M4 5.5v5.8h5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="start-button" id="startButton"><svg id="startIcon" viewBox="0 0 24 24" fill="currentColor"><path d="m8 5.5 11 6.5-11 6.5v-13Z"/></svg><span id="startLabel">Начать фокус</span></button><button class="control-quiet" id="skipButton" aria-label="Пропустить интервал" title="Пропустить"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5 16 12 5 18.5v-13Zm13-.5h2v14h-2V5Z"/></svg></button></div>
+          <div class="focus-divider"></div><div class="current-task"><small>СЕЙЧАС В ФОКУСЕ</small><p id="currentTaskName">Прочитать главу и сделать заметки</p></div><div class="cycles" id="cycles"><span class="cycle-dot"></span><span class="cycle-dot"></span><span class="cycle-dot"></span><span class="cycle-dot"></span><span class="cycle-copy">до длинного отдыха</span></div>
+        </section>
+        <aside class="side-column">
+          <section class="side-panel" id="tasks"><div class="panel-heading"><div><h3>План на сейчас</h3><p id="taskProgress">1 из 3 завершено</p></div><button class="text-button" id="clearTasks">Очистить</button></div><div class="task-list" id="taskList"></div><button class="add-task" id="addTask"><span>＋</span> Добавить задачу</button></section>
+          <section class="side-panel music-panel" id="music"><div class="panel-heading"><div><h3>Музыка</h3><p id="musicSub">эфиры SomaFM для работы</p></div></div><div class="source-switch" role="group" aria-label="Источник музыки"><button class="source-tab" data-source="radio" aria-pressed="true">Радио</button><button class="source-tab" data-source="youtube" aria-pressed="false">YouTube</button><button class="source-tab" data-source="spotify" aria-pressed="false">Spotify</button></div><div id="radioPane"><div class="station-art"><span class="art-caption" id="artCaption">Мягкий поток</span></div><div class="music-meta"><div><p class="track-title" id="stationName">Groove Salad</p><p class="track-subtitle" id="stationMood">эмбиент · лёгкий ритм</p></div><div class="equalizer" id="equalizer" aria-label="Воспроизведение остановлено"><i></i><i></i><i></i><i></i></div></div><audio id="audio" preload="none"></audio><div class="player-controls"><button class="player-button" id="previousStation" aria-label="Предыдущая станция"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5h2v14H5V5Zm14 .5L8 12l11 6.5v-13Z"/></svg></button><button class="player-button main-play" id="musicButton" aria-label="Слушать музыку"><svg id="musicIcon" viewBox="0 0 24 24" fill="currentColor"><path d="m8 5.5 11 6.5-11 6.5v-13Z"/></svg></button><button class="player-button" id="nextStation" aria-label="Следующая станция"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 5h2v14h-2V5ZM5 5.5 16 12 5 18.5v-13Z"/></svg></button></div><label class="volume-row" aria-label="Громкость"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10v4h3l4 3V7l-4 3H4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M15 9a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><input id="volume" type="range" min="0" max="1" step="0.01" value="0.55" /><span class="sr-only" id="volumeValue">55 процентов</span></label><select class="station-select" id="stationSelect" aria-label="Выбрать музыкальную станцию"></select><p class="audio-note">Нажми ▶, чтобы включить эфир.</p></div>
+            <div id="embedPane" hidden>
+              <form class="embed-add" id="embedForm" autocomplete="off"><input id="embedUrl" type="text" inputmode="url" spellcheck="false" aria-label="Ссылка на музыку" placeholder="Вставь ссылку" /><button class="text-button" type="submit">Добавить</button></form>
+              <p class="embed-error" id="embedError" role="alert" hidden></p>
+              <div class="embed-stage" id="embedStage"></div>
+              <div class="embed-list" id="embedList" aria-label="Сохранённые ссылки"></div>
+              <p class="audio-note" id="embedNote"></p>
+            </div></section>
+          <section class="side-panel notes-panel" id="notesPanel">
+            <div class="panel-heading"><div><h3>Заметки</h3><p>«@» — упомянуть задачу или документ</p></div><span class="notes-saved" id="notesSaved">сохранено</span></div>
+            <div class="notes-wrap"><div class="notes-backdrop" id="notesBackdrop" aria-hidden="true"></div><textarea id="notes" class="notes-area" placeholder="Например: сверить @задачу с @документом" aria-label="Заметки" aria-autocomplete="list" aria-controls="mentionPop"></textarea></div>
+            <div class="mention-pop" id="mentionPop" role="listbox" aria-label="Упоминания" hidden></div>
+            <div class="mention-chips" id="mentionChips"></div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="side-panel docs-panel" id="docs" aria-label="Документы">
+        <div class="panel-heading"><div><h3>Документы</h3><p>PDF хранятся только в этом браузере · можно перетащить файл сюда</p></div><button class="text-button" id="addPdf">Добавить PDF</button></div>
+        <input type="file" id="pdfInput" accept="application/pdf,.pdf" multiple hidden />
+        <div class="docs-body">
+          <div class="doc-list" id="docList" aria-label="Список документов"></div>
+          <div class="doc-viewer" id="docViewer" tabindex="-1">
+            <div class="viewer-bar">
+              <span class="viewer-title" id="viewerTitle">Документ не выбран</span>
+              <div class="page-controls page-box">
+                <button class="icon-button" id="prevPage" aria-label="Предыдущая страница" title="Назад (←)" disabled>‹</button>
+                <input id="pageInput" type="number" min="1" value="1" aria-label="Номер страницы" disabled />
+                <span id="pageCount">/ 0</span>
+                <button class="icon-button" id="nextPage" aria-label="Следующая страница" title="Вперёд (→)" disabled>›</button>
+              </div>
+              <div class="page-controls page-box">
+                <button class="icon-button" id="zoomOut" aria-label="Уменьшить" title="Уменьшить" disabled>−</button>
+                <button class="icon-button wide" id="zoomFit" aria-label="По ширине" title="По ширине" disabled>По ширине</button>
+                <button class="icon-button" id="zoomIn" aria-label="Увеличить" title="Увеличить" disabled>+</button>
+              </div>
+              <button class="icon-button wide" id="mentionDoc" title="Вставить упоминание в заметки" disabled>@ в заметки</button>
+              <button class="icon-button wide" id="openTab" title="Открыть в новой вкладке" disabled>В новой вкладке</button>
+            </div>
+            <div class="viewer-stage" id="pdfStage">
+              <canvas id="pdfCanvas" hidden></canvas>
+              <iframe id="pdfFrame" title="PDF-документ" hidden></iframe>
+              <div class="viewer-empty" id="viewerEmpty"><div><b>Здесь откроется PDF</b>Нажми «Добавить PDF» или перетащи файл в эту область.<br />Страницу можно упомянуть в заметках: <i>@Название стр. 3</i></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bottom-grid" aria-label="Статистика за сегодня"><div class="side-panel mini-stat"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 7v5l3.2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div><div class="stat-label">В фокусе сегодня</div><div class="stat-value" id="focusStat">0 мин</div></div></div><div class="side-panel mini-stat"><div class="stat-icon mint"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="stat-label">Завершено задач</div><div class="stat-value" id="doneStat">1 задача</div></div></div><div class="side-panel mini-stat"><div class="stat-icon gold"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 14.6 9l6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1-6-4.3-4.2 6-.8 2.6-5.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></div><div><div class="stat-label">Циклы Pomodoro</div><div class="stat-value" id="cycleStat">0 циклов</div></div></div></section>
+      <section class="side-panel week-panel" aria-label="Фокус за неделю"><div class="panel-heading"><div><h3>Неделя</h3><p>минуты фокуса по дням</p></div><span class="week-total" id="weekTotal">0 мин за 7 дней</span></div><div class="week-bars" id="weekBars"></div></section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="settingsDialog"><div class="dialog-head"><h3>Настрой ритм</h3><button class="icon-button" id="closeSettings" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></div><div class="settings-grid"><label class="setting-row">Фокус, минут<input id="focusMinutes" type="number" min="1" max="90" value="25" /></label><label class="setting-row">Короткий отдых, минут<input id="shortMinutes" type="number" min="1" max="30" value="5" /></label><label class="setting-row">Длинный отдых, минут<input id="longMinutes" type="number" min="1" max="60" value="15" /></label><label class="setting-row">Звук в конце сессии<input id="soundToggle" type="checkbox" /></label><div class="setting-row">Резервная копия<span class="row-actions"><button type="button" class="text-button" id="exportData">Экспорт</button><button type="button" class="text-button" id="importData">Импорт</button></span></div><p class="audio-note">В копию входят задачи, заметки, настройки, список ссылок и статистика. PDF-файлы остаются в этом браузере.</p><input type="file" id="importFile" accept="application/json,.json" hidden /></div><div class="dialog-actions"><button id="cancelSettings">Отмена</button><button class="save-settings" id="saveSettings">Сохранить</button></div></dialog>
+
+  <!-- PDF.js: если библиотека не загрузилась (нет сети), PDF откроется встроенным просмотрщиком браузера -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    (() => {
+      const KEY = 'stillroom-state-v1';
+      const defaults = {
+        durations: { focus: 25, short: 5, long: 15 }, mode: 'focus', remaining: 1500,
+        running: false, endsAt: null, completedCycles: 0, totalFocus: 0, todayFocus: 0,
+        date: new Date().toDateString(), streak: 1,
+        tasks: [
+          { id: 1, name: 'Прочитать главу и сделать заметки', done: false },
+          { id: 2, name: 'Повторить конспект по истории', done: false },
+          { id: 3, name: 'Разобрать 5 задач по алгебре', done: true }
+        ], selectedTask: 1, notes: '', station: 0, volume: .55,
+        theme: 'paper', doc: null, docPages: {},
+        source: 'radio', library: [], nowPlaying: {}, spotifyBig: false,
+        sound: true, history: {}
+      };
+      const stations = [
+        { name:'Groove Salad', mood:'эмбиент · лёгкий ритм', art:'Мягкий поток', url:'https://ice5.somafm.com/groovesalad-128-mp3' },
+        { name:'Drone Zone', mood:'атмосфера · почти без ритма', art:'Туманное утро', url:'https://ice5.somafm.com/dronezone-128-mp3' },
+        { name:'Deep Space One', mood:'космический эмбиент', art:'В открытом космосе', url:'https://ice5.somafm.com/deepspaceone-128-mp3' }
+      ];
+      let state;
+      try { state = { ...structuredClone(defaults), ...JSON.parse(localStorage.getItem(KEY) || '{}') }; }
+      catch { state = structuredClone(defaults); }
+      state.durations = { ...defaults.durations, ...(state.durations || {}) };
+      if (!state.docPages || typeof state.docPages !== 'object') state.docPages = {};
+      if (!Array.isArray(state.library)) state.library = [];
+      if (!state.nowPlaying || typeof state.nowPlaying !== 'object') state.nowPlaying = {};
+      if (!['radio', 'youtube', 'spotify'].includes(state.source)) state.source = 'radio';
+      if (!state.history || typeof state.history !== 'object' || Array.isArray(state.history)) state.history = {};
+      if (typeof state.sound !== 'boolean') state.sound = true;
+      if (!state.history[dayKey()] && state.todayFocus > 0) state.history[dayKey()] = state.todayFocus;
+      if (state.date !== new Date().toDateString()) { state.todayFocus = 0; state.date = new Date().toDateString(); }
+      if (!Array.isArray(state.tasks)) state.tasks = structuredClone(defaults.tasks);
+      if (state.running && state.endsAt) state.remaining = Math.max(0, Math.ceil((state.endsAt - Date.now()) / 1000));
+      if (state.remaining <= 0) { state.remaining = state.durations[state.mode] * 60; state.running = false; state.endsAt = null; }
+
+      const $ = (id) => document.getElementById(id);
+      const progressCircle = $('timerProgress');
+      const circumference = 2 * Math.PI * 47;
+      progressCircle.style.strokeDasharray = circumference;
+      const modeInfo = {
+        focus: { label:'фокус на выбранной задаче', sub:'до конца сессии', button:'Начать фокус', color:'var(--accent)' },
+        short: { label:'короткий перерыв', sub:'встань и посмотри вдаль', button:'Начать отдых', color:'var(--mint)' },
+        long: { label:'длинный перерыв', sub:'можно отойти от экрана', button:'Начать отдых', color:'var(--coral)' }
+      };
+      const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
+      let toastTimer;
+      function toast(message) { $('toast').textContent = message; $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2400); }
+      function renderDate() { $('dateLine').textContent = new Intl.DateTimeFormat('ru-RU', { weekday:'long', day:'numeric', month:'long' }).format(new Date()); }
+      function plural(n, forms) { const x=Math.abs(n)%100, y=x%10; if(x>10&&x<20)return forms[2]; if(y>1&&y<5)return forms[1]; if(y===1)return forms[0]; return forms[2]; }
+      function formatTime(sec) { return `${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`; }
+      const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      /* ---------- Темы ---------- */
+      const themeColors = { paper:'#f4f1ea', night:'#17182b', sage:'#e6ede6', sepia:'#eddfc8' };
+      const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+      function resolveTheme(t) { return t === 'auto' ? (darkQuery.matches ? 'night' : 'paper') : (themeColors[t] ? t : 'paper'); }
+      function applyTheme() {
+        const theme = resolveTheme(state.theme);
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', themeColors[theme]);
+        document.querySelectorAll('.theme-dot').forEach(dot => dot.setAttribute('aria-pressed', String(dot.dataset.themePick === state.theme)));
+      }
+      document.querySelectorAll('.theme-dot').forEach(dot => dot.addEventListener('click', () => {
+        state.theme = dot.dataset.themePick; applyTheme(); persist();
+        toast(`Тема: ${dot.title}`);
+      }));
+      darkQuery.addEventListener?.('change', () => { if (state.theme === 'auto') applyTheme(); });
+
+      /* ---------- Задачи ---------- */
+      function renderTasks() {
+        const list = $('taskList'); list.replaceChildren();
+        state.tasks.forEach(task => {
+          const row = document.createElement('div'); row.className = `task-row${task.done ? ' completed' : ''}${state.selectedTask === task.id ? ' selected' : ''}`;
+          const check = document.createElement('input'); check.className = 'task-check'; check.type='checkbox'; check.checked=!!task.done; check.setAttribute('aria-label', `Завершить задачу: ${task.name}`);
+          check.addEventListener('change', (event) => { event.stopPropagation(); task.done = check.checked; if (task.done && state.selectedTask === task.id) { const next=state.tasks.find(t=>!t.done); state.selectedTask=next?.id ?? null; } render(); persist(); });
+          const choose = document.createElement('button'); choose.className='task-select'; choose.type='button'; choose.title='Выбрать задачу для фокуса';
+          const name = document.createElement('span'); name.className='task-name'; name.textContent=task.name; choose.append(name); choose.addEventListener('click', () => { state.selectedTask=task.id; $('currentTaskName').textContent=task.name; renderTasks(); persist(); });
+          const time = document.createElement('span'); time.className='task-time';
+          time.textContent=task.done ? 'готово' : (task.pomos ? `${task.pomos} ${plural(task.pomos,['цикл','цикла','циклов'])}` : '25 мин');
+          const edit = document.createElement('button'); edit.type='button'; edit.className='task-act'; edit.textContent='✎'; edit.title='Переименовать'; edit.setAttribute('aria-label', `Переименовать задачу: ${task.name}`);
+          edit.addEventListener('click', () => { const value = prompt('Новое название задачи', task.name); const next = value?.trim().replace(/[@\n]/g, ''); if (!next) return; task.name = next; render(); persist(); });
+          const remove = document.createElement('button'); remove.type='button'; remove.className='task-act rm'; remove.textContent='×'; remove.title='Удалить задачу'; remove.setAttribute('aria-label', `Удалить задачу: ${task.name}`);
+          remove.addEventListener('click', () => { state.tasks = state.tasks.filter(t => t.id !== task.id); if (state.selectedTask === task.id) state.selectedTask = state.tasks.find(t => !t.done)?.id ?? null; render(); persist(); toast('Задача удалена'); });
+          row.append(check, choose, time, edit, remove); list.append(row);
+        });
+        const completed=state.tasks.filter(t=>t.done).length;
+        $('taskProgress').textContent=`${completed} из ${state.tasks.length} завершено`;
+        $('doneStat').textContent=`${completed} ${plural(completed,['задача','задачи','задач'])}`;
+        const selected = state.tasks.find(t=>t.id===state.selectedTask && !t.done);
+        $('currentTaskName').textContent=selected?.name || 'Выбери задачу перед стартом';
+        renderMentions();
+      }
+
+      /* ---------- Таймер ---------- */
+      function renderTimer() {
+        const total=state.durations[state.mode]*60;
+        $('timeDisplay').textContent=formatTime(state.remaining);
+        $('timerLabel').textContent=modeInfo[state.mode].label;
+        $('timerSub').textContent=modeInfo[state.mode].sub;
+        $('startLabel').textContent=state.running?'Пауза':modeInfo[state.mode].button;
+        $('startIcon').innerHTML=state.running?'<path d="M7 5.5h3.5v13H7zm6.5 0H17v13h-3.5z"/>':'<path d="m8 5.5 11 6.5-11 6.5v-13Z"/>';
+        $('timerProgress').style.stroke=modeInfo[state.mode].color;
+        $('timerProgress').style.strokeDashoffset=circumference*(1-state.remaining/total);
+        $('sessionCount').textContent=`сессия ${String(state.completedCycles+1).padStart(2,'0')} · сегодня`;
+        document.querySelectorAll('.mode-button').forEach(button=>button.setAttribute('aria-pressed', String(button.dataset.mode===state.mode)));
+        $('cycles').querySelectorAll('.cycle-dot').forEach((dot,i)=>dot.classList.toggle('done',i<state.completedCycles%4));
+        $('focusStat').textContent=`${state.todayFocus||0} мин`;
+        $('cycleStat').textContent=`${state.completedCycles} ${plural(state.completedCycles,['цикл','цикла','циклов'])}`;
+        document.title=`${formatTime(state.remaining)} · stillroom`;
+      }
+      function renderStation() {
+        const station=stations[state.station]||stations[0];
+        $('stationSelect').value=String(state.station);
+        $('stationName').textContent=station.name; $('stationMood').textContent=station.mood; $('artCaption').textContent=station.art;
+      }
+      /* ---------- Статистика, серия дней, звук ---------- */
+      function dayKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+      function computeStreak() {
+        const d = new Date(); let n = 0;
+        if (!(state.history[dayKey(d)] > 0)) d.setDate(d.getDate() - 1);
+        while (state.history[dayKey(d)] > 0) { n++; d.setDate(d.getDate() - 1); }
+        return n;
+      }
+      function renderStats() {
+        const streak = computeStreak();
+        $('streakCount').textContent = streak;
+        $('streakWord').textContent = `${plural(streak, ['день', 'дня', 'дней'])} подряд`;
+        const box = $('weekBars'); box.replaceChildren();
+        const days = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d); }
+        const values = days.map(d => state.history[dayKey(d)] || 0);
+        const max = Math.max(30, ...values);
+        days.forEach((d, i) => {
+          const col = document.createElement('div'); col.className = `week-col${values[i] ? '' : ' empty'}${i === 6 ? ' today' : ''}`;
+          col.title = `${new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)}: ${values[i]} мин`;
+          const val = document.createElement('span'); val.className = 'week-val'; val.textContent = values[i] ? values[i] : '';
+          const track = document.createElement('div'); track.className = 'week-track';
+          const bar = document.createElement('div'); bar.className = 'week-bar'; bar.style.height = `${Math.max(2, Math.round(values[i] / max * 100))}%`; track.append(bar);
+          const label = document.createElement('small'); label.textContent = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(d);
+          col.append(val, track, label); box.append(col);
+        });
+        $('weekTotal').textContent = `${values.reduce((a, b) => a + b, 0)} мин за 7 дней`;
+      }
+      function beep() {
+        if (!state.sound) return;
+        try {
+          const ac = new (window.AudioContext || window.webkitAudioContext)();
+          [880, 660, 880].forEach((freq, i) => {
+            const t = ac.currentTime + i * .28, osc = ac.createOscillator(), gain = ac.createGain();
+            osc.type = 'sine'; osc.frequency.value = freq;
+            gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(.2, t + .03); gain.gain.exponentialRampToValueAtTime(.0001, t + .24);
+            osc.connect(gain).connect(ac.destination); osc.start(t); osc.stop(t + .26);
+          });
+          setTimeout(() => ac.close(), 1500);
+        } catch {}
+      }
+      function render() { renderTimer(); renderTasks(); renderStation(); renderStats(); }
+      function setMode(mode) {
+        if (!modeInfo[mode]) return;
+        state.mode=mode; state.running=false; state.endsAt=null; state.remaining=state.durations[mode]*60; render(); persist();
+      }
+      function startPause() {
+        if (state.running) { state.remaining=Math.max(0,Math.ceil((state.endsAt-Date.now())/1000)); state.running=false; state.endsAt=null; }
+        else {
+          state.running=true; state.endsAt=Date.now()+state.remaining*1000;
+          try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {}
+        }
+        renderTimer(); persist();
+      }
+      function finishSession() {
+        const finishedMode=state.mode; state.running=false; state.endsAt=null;
+        beep();
+        if (finishedMode==='focus') {
+          state.completedCycles++; state.todayFocus += state.durations.focus;
+          state.history[dayKey()] = (state.history[dayKey()] || 0) + state.durations.focus;
+          const focusedTask = state.tasks.find(t => t.id === state.selectedTask && !t.done);
+          if (focusedTask) focusedTask.pomos = (focusedTask.pomos || 0) + 1;
+          const longBreak=state.completedCycles%4===0; state.mode=longBreak?'long':'short';
+          toast(longBreak?'Фокус-сессия завершена. Время для длинного отдыха.':'Отличная работа. Сделай короткий перерыв.');
+          try { new Notification('stillroom', { body:'Время фокус-сессии закончилось. Пора отдохнуть.' }); } catch {}
+        } else { state.mode='focus'; toast('Отдых окончен. Возвращаемся к делу?'); }
+        state.remaining=state.durations[state.mode]*60; state.streak=Math.max(1,state.streak||1); render(); persist();
+      }
+      function skipSession() { if(state.mode==='focus'){ state.mode=(state.completedCycles+1)%4===0?'long':'short'; } else state.mode='focus'; state.running=false; state.endsAt=null; state.remaining=state.durations[state.mode]*60; render(); persist(); toast('Интервал пропущен'); }
+      document.querySelectorAll('.mode-button').forEach(button=>button.addEventListener('click',()=>setMode(button.dataset.mode)));
+      $('startButton').addEventListener('click',startPause);
+      $('resetButton').addEventListener('click',()=>{state.running=false;state.endsAt=null;state.remaining=state.durations[state.mode]*60;renderTimer();persist();toast('Таймер сброшен')});
+      $('skipButton').addEventListener('click',skipSession);
+      $('addTask').addEventListener('click',()=>{const value=prompt('Что нужно сделать?');if(!value?.trim())return;const task={id:Date.now(),name:value.trim().replace(/[@\n]/g,''),done:false};if(!task.name)return;state.tasks.push(task);if(!state.selectedTask)state.selectedTask=task.id;render();persist()});
+      $('clearTasks').addEventListener('click',()=>{state.tasks=state.tasks.filter(task=>!task.done);if(!state.tasks.some(t=>t.id===state.selectedTask))state.selectedTask=state.tasks[0]?.id??null;render();persist();toast('Готовые задачи убраны')});
+
+      /* ---------- Документы: хранилище (IndexedDB) ---------- */
+      let docs = [];          // { id, name, size, added, blob }
+      let dbPromise = null;
+      function openDb() {
+        if (!dbPromise) dbPromise = new Promise((resolve, reject) => {
+          if (!window.indexedDB) { reject(new Error('no idb')); return; }
+          const req = indexedDB.open('stillroom-docs', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore('pdfs', { keyPath: 'id' });
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        return dbPromise;
+      }
+      async function dbRun(mode, fn) {
+        const db = await openDb();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('pdfs', mode); const store = tx.objectStore('pdfs');
+          const req = fn(store);
+          tx.oncomplete = () => resolve(req?.result); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+        });
+      }
+      const dbAll = () => dbRun('readonly', s => s.getAll());
+      const dbPut = (rec) => dbRun('readwrite', s => s.put(rec));
+      const dbDel = (id) => dbRun('readwrite', s => s.delete(id));
+
+      function formatSize(bytes) { return bytes > 1048576 ? `${(bytes/1048576).toFixed(1)} МБ` : `${Math.max(1, Math.round(bytes/1024))} КБ`; }
+      function uniqueName(raw) {
+        let base = raw.replace(/\.pdf$/i, '').replace(/[@\n\r]/g, '').trim() || 'Документ';
+        let name = base, n = 2;
+        while (docs.some(d => d.name.toLowerCase() === name.toLowerCase())) name = `${base} (${n++})`;
+        return name;
+      }
+      function renderDocList() {
+        const list = $('docList'); list.replaceChildren();
+        if (!docs.length) {
+          const empty = document.createElement('div'); empty.className = 'doc-empty';
+          empty.textContent = 'Пока пусто. Добавь PDF-конспект, статью или учебник — он останется в этом браузере.';
+          list.append(empty); return;
+        }
+        docs.forEach(doc => {
+          const item = document.createElement('div'); item.className = `doc-item${state.doc === doc.id ? ' active' : ''}`;
+          const open = document.createElement('button'); open.type = 'button'; open.className = 'doc-open'; open.title = doc.name;
+          const b = document.createElement('b'); b.textContent = doc.name;
+          const s = document.createElement('small'); s.textContent = formatSize(doc.size);
+          open.append(b, s); open.addEventListener('click', () => openDoc(doc.id));
+          const del = document.createElement('button'); del.type = 'button'; del.className = 'doc-del'; del.textContent = '×'; del.setAttribute('aria-label', `Удалить документ ${doc.name}`); del.title = 'Удалить';
+          del.addEventListener('click', () => deleteDoc(doc.id));
+          item.append(open, del); list.append(item);
+        });
+      }
+      async function addFiles(fileList) {
+        const files = [...fileList].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+        if (!files.length) { toast('Нужен файл в формате PDF'); return; }
+        let lastId = null, saveFailed = false;
+        for (const file of files) {
+          const rec = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: uniqueName(file.name), size: file.size, added: Date.now(), blob: file };
+          try { await dbPut(rec); } catch { saveFailed = true; }
+          docs.push(rec); lastId = rec.id;
+        }
+        renderDocList(); renderMentions();
+        if (lastId) openDoc(lastId);
+        toast(saveFailed ? 'Документ открыт, но браузер не дал сохранить его надолго' : (files.length > 1 ? `Добавлено документов: ${files.length}` : 'Документ добавлен'));
+      }
+      async function deleteDoc(id) {
+        const doc = docs.find(d => d.id === id); if (!doc) return;
+        if (!confirm(`Удалить «${doc.name}» из stillroom?`)) return;
+        try { await dbDel(id); } catch {}
+        docs = docs.filter(d => d.id !== id); delete state.docPages[id];
+        if (state.doc === id) { closeViewer(); state.doc = null; }
+        persist(); renderDocList(); renderMentions(); toast('Документ удалён');
+      }
+
+      /* ---------- Документы: просмотр ---------- */
+      const stage = $('pdfStage'), canvas = $('pdfCanvas'), frame = $('pdfFrame');
+      const viewerButtons = ['prevPage', 'nextPage', 'pageInput', 'zoomOut', 'zoomIn', 'zoomFit', 'mentionDoc', 'openTab'];
+      let pdfDoc = null, pdfPage = 1, pdfScale = 'fit', curScale = 1, loadToken = 0, renderTask = null, frameUrl = null, renderQueued = false, rendering = false;
+      const hasPdfJs = () => typeof window.pdfjsLib !== 'undefined';
+      if (hasPdfJs()) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      function setViewerEnabled(on) { viewerButtons.forEach(id => { $(id).disabled = !on; }); }
+      function clearFrame() { frame.hidden = true; frame.removeAttribute('src'); if (frameUrl) { URL.revokeObjectURL(frameUrl); frameUrl = null; } }
+      function closeViewer() {
+        loadToken++; try { renderTask?.cancel(); } catch {}
+        pdfDoc?.destroy?.(); pdfDoc = null; clearFrame();
+        canvas.hidden = true; $('viewerEmpty').hidden = false; $('docViewer').classList.remove('native');
+        $('viewerTitle').textContent = 'Документ не выбран'; $('pageCount').textContent = '/ 0'; $('pageInput').value = 1;
+        setViewerEnabled(false);
+      }
+      function showMessage(html) { $('viewerEmpty').hidden = false; $('viewerEmpty').innerHTML = `<div>${html}</div>`; }
+      async function openDoc(id, page) {
+        const rec = docs.find(d => d.id === id); if (!rec) return;
+        state.doc = id; persist(); renderDocList();
+        const token = ++loadToken;
+        try { renderTask?.cancel(); } catch {}
+        pdfDoc?.destroy?.(); pdfDoc = null; clearFrame();
+        $('viewerTitle').textContent = rec.name; $('viewerTitle').title = rec.name;
+        $('viewerEmpty').innerHTML = '<div>Открываю документ…</div>'; $('viewerEmpty').hidden = false; canvas.hidden = true;
+        setViewerEnabled(false); $('mentionDoc').disabled = false; $('openTab').disabled = false;
+        $('docViewer').classList.remove('native');
+        if (hasPdfJs()) {
+          try {
+            const data = await rec.blob.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+            if (token !== loadToken) { pdf.destroy?.(); return; }
+            pdfDoc = pdf; pdfScale = 'fit';
+            $('viewerEmpty').hidden = true; canvas.hidden = false;
+            $('pageCount').textContent = `/ ${pdf.numPages}`; $('pageInput').max = pdf.numPages;
+            setViewerEnabled(true);
+            gotoPage(page || state.docPages[id] || 1);
+            return;
+          } catch (error) { if (token !== loadToken) return; }
+        }
+        // Запасной вариант: встроенный просмотрщик браузера
+        if (token !== loadToken) return;
+        try {
+          frameUrl = URL.createObjectURL(rec.blob); frame.src = frameUrl; frame.hidden = false;
+          $('viewerEmpty').hidden = true; $('docViewer').classList.add('native');
+          $('mentionDoc').disabled = false; $('openTab').disabled = false;
+        } catch { showMessage('<b>Не удалось открыть файл</b>Возможно, PDF повреждён или защищён паролем.'); }
+      }
+      function gotoPage(n) {
+        if (!pdfDoc) return;
+        pdfPage = Math.min(Math.max(1, Math.round(Number(n) || 1)), pdfDoc.numPages);
+        $('pageInput').value = pdfPage;
+        $('prevPage').disabled = pdfPage <= 1; $('nextPage').disabled = pdfPage >= pdfDoc.numPages;
+        if (state.doc) { state.docPages[state.doc] = pdfPage; persist(); }
+        stage.scrollTop = 0; scheduleRender();
+      }
+      function scheduleRender() { renderQueued = true; if (!rendering) drainRender(); }
+      async function drainRender() {
+        rendering = true;
+        while (renderQueued) {
+          renderQueued = false;
+          if (!pdfDoc) break;
+          const token = loadToken;
+          try {
+            const page = await pdfDoc.getPage(pdfPage);
+            if (token !== loadToken) break;
+            const base = page.getViewport({ scale: 1 });
+            const scale = pdfScale === 'fit' ? Math.max(.3, (stage.clientWidth - 32) / base.width) : pdfScale;
+            curScale = scale;
+            const viewport = page.getViewport({ scale });
+            const ratio = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(viewport.width * ratio); canvas.height = Math.floor(viewport.height * ratio);
+            canvas.style.width = `${Math.floor(viewport.width)}px`; canvas.style.height = `${Math.floor(viewport.height)}px`;
+            const ctx = canvas.getContext('2d');
+            renderTask = page.render({ canvasContext: ctx, viewport, transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null });
+            await renderTask.promise;
+          } catch (error) { /* отменённая отрисовка — это нормально */ }
+        }
+        rendering = false;
+      }
+      $('prevPage').addEventListener('click', () => gotoPage(pdfPage - 1));
+      $('nextPage').addEventListener('click', () => gotoPage(pdfPage + 1));
+      $('pageInput').addEventListener('change', () => gotoPage($('pageInput').value));
+      $('zoomIn').addEventListener('click', () => { pdfScale = Math.min(4, curScale * 1.2); scheduleRender(); });
+      $('zoomOut').addEventListener('click', () => { pdfScale = Math.max(.3, curScale / 1.2); scheduleRender(); });
+      $('zoomFit').addEventListener('click', () => { pdfScale = 'fit'; scheduleRender(); });
+      $('openTab').addEventListener('click', () => { const rec = docs.find(d => d.id === state.doc); if (!rec) return; const url = URL.createObjectURL(rec.blob); window.open(url, '_blank'); setTimeout(() => URL.revokeObjectURL(url), 60000); });
+      let resizeTimer; window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (pdfDoc && pdfScale === 'fit') scheduleRender(); }, 150); });
+      $('docViewer').addEventListener('keydown', (event) => {
+        if (!pdfDoc || event.target.tagName === 'INPUT') return;
+        if (event.key === 'ArrowLeft' || event.key === 'PageUp') { event.preventDefault(); gotoPage(pdfPage - 1); }
+        if (event.key === 'ArrowRight' || event.key === 'PageDown') { event.preventDefault(); gotoPage(pdfPage + 1); }
+      });
+      $('addPdf').addEventListener('click', () => $('pdfInput').click());
+      $('pdfInput').addEventListener('change', () => { addFiles($('pdfInput').files); $('pdfInput').value = ''; });
+      const docsPanel = $('docs');
+      ['dragenter', 'dragover'].forEach(name => docsPanel.addEventListener(name, (event) => { if ([...(event.dataTransfer?.types || [])].includes('Files')) { event.preventDefault(); docsPanel.classList.add('dragging'); } }));
+      ['dragleave', 'drop'].forEach(name => docsPanel.addEventListener(name, (event) => { if (name === 'dragleave' && docsPanel.contains(event.relatedTarget)) return; docsPanel.classList.remove('dragging'); }));
+      docsPanel.addEventListener('drop', (event) => { if (event.dataTransfer?.files?.length) { event.preventDefault(); addFiles(event.dataTransfer.files); } });
+      window.addEventListener('dragover', (event) => event.preventDefault());
+      window.addEventListener('drop', (event) => event.preventDefault());
+
+      /* ---------- Заметки и упоминания ---------- */
+      const notes = $('notes'), backdrop = $('notesBackdrop'), pop = $('mentionPop');
+      notes.value = state.notes || '';
+      function mentionItems() {
+        return [
+          ...state.tasks.map(t => ({ kind: 'task', id: t.id, name: t.name })),
+          ...docs.map(d => ({ kind: 'doc', id: d.id, name: d.name }))
+        ].filter(item => item.name);
+      }
+      function findMentions(text) {
+        const items = mentionItems().sort((a, b) => b.name.length - a.name.length);
+        if (!items.length || !text.includes('@')) return [];
+        const re = new RegExp('@(' + items.map(i => escapeRe(i.name)).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+        const found = []; let match;
+        while ((match = re.exec(text))) {
+          const item = items.find(i => i.name.toLowerCase() === match[1].toLowerCase());
+          if (!item) continue;
+          let end = match.index + match[0].length, page = null;
+          if (item.kind === 'doc') {
+            const pm = /^\s+стр\.?\s*(\d+)/i.exec(text.slice(end));
+            if (pm) { page = Number(pm[1]); end += pm[0].length; re.lastIndex = end; }
+          }
+          found.push({ start: match.index, end, kind: item.kind, id: item.id, name: item.name, page });
+        }
+        return found;
+      }
+      function renderMentions() {
+        const text = notes.value, found = findMentions(text);
+        let html = '', cursor = 0;
+        found.forEach(m => { html += escapeHtml(text.slice(cursor, m.start)) + `<mark class="${m.kind}">${escapeHtml(text.slice(m.start, m.end))}</mark>`; cursor = m.end; });
+        html += escapeHtml(text.slice(cursor)) + '\n';
+        backdrop.innerHTML = html; backdrop.scrollTop = notes.scrollTop;
+        const chips = $('mentionChips'); chips.replaceChildren();
+        const seen = new Set();
+        found.forEach(m => {
+          const key = `${m.kind}:${m.id}:${m.page ?? ''}`; if (seen.has(key)) return; seen.add(key);
+          const chip = document.createElement('button'); chip.type = 'button'; chip.className = `chip ${m.kind}`;
+          const kind = document.createElement('span'); kind.className = 'kind'; kind.textContent = m.kind === 'doc' ? 'PDF' : 'задача';
+          const label = document.createElement('span'); label.className = 'label'; label.textContent = m.page ? `${m.name} · стр. ${m.page}` : m.name;
+          chip.title = m.kind === 'doc' ? 'Открыть документ' : 'Сделать задачу текущей';
+          chip.append(kind, label);
+          chip.addEventListener('click', () => {
+            if (m.kind === 'doc') { openDoc(m.id, m.page || undefined); docsPanel.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }
+            else { state.selectedTask = m.id; renderTasks(); persist(); toast('Задача выбрана для фокуса'); }
+          });
+          chips.append(chip);
+        });
+      }
+      let noteTimer;
+      function onNotesChanged() {
+        $('notesSaved').textContent = 'сохраняю…'; clearTimeout(noteTimer);
+        noteTimer = setTimeout(() => { state.notes = notes.value; persist(); $('notesSaved').textContent = 'сохранено'; }, 400);
+        renderMentions();
+      }
+      notes.addEventListener('scroll', () => { backdrop.scrollTop = notes.scrollTop; });
+
+      // Подсказки по символу «@»
+      let popItems = [], popIndex = 0, popRange = null;
+      function mentionContext() {
+        const pos = notes.selectionStart; if (pos !== notes.selectionEnd) return null;
+        const before = notes.value.slice(0, pos);
+        const m = /(^|\s)@([^\n@]{0,40})$/.exec(before);
+        if (!m) return null;
+        return { start: pos - m[2].length - 1, end: pos, query: m[2] };
+      }
+      function closePop() { pop.hidden = true; popItems = []; popRange = null; }
+      function updatePop() {
+        const ctx = mentionContext(); if (!ctx) { closePop(); return; }
+        const q = ctx.query.trim().toLowerCase();
+        const items = [];
+        mentionItems().forEach(item => {
+          if (q && !item.name.toLowerCase().includes(q)) return;
+          items.push({ ...item, insert: `@${item.name} `, label: item.name });
+          if (item.kind === 'doc' && item.id === state.doc && pdfDoc) items.push({ ...item, insert: `@${item.name} стр. ${pdfPage} `, label: `${item.name} · стр. ${pdfPage}` });
+        });
+        popItems = items.slice(0, 7); popIndex = 0; popRange = ctx;
+        if (!popItems.length) { closePop(); return; }
+        drawPop();
+      }
+      function drawPop() {
+        pop.replaceChildren();
+        popItems.forEach((item, index) => {
+          const button = document.createElement('button'); button.type = 'button'; button.className = 'mention-item'; button.setAttribute('role', 'option'); button.setAttribute('aria-selected', String(index === popIndex));
+          const kind = document.createElement('span'); kind.className = `kind ${item.kind}`; kind.textContent = item.kind === 'doc' ? 'PDF' : 'задача';
+          const label = document.createElement('span'); label.className = 'label'; label.textContent = item.label;
+          button.append(kind, label);
+          button.addEventListener('mousedown', (event) => { event.preventDefault(); chooseMention(index); });
+          pop.append(button);
+        });
+        const hint = document.createElement('p'); hint.className = 'mention-hint'; hint.textContent = '↑ ↓ — выбрать · Enter — вставить · Esc — закрыть'; pop.append(hint);
+        const wrap = notes.parentElement; pop.style.top = `${wrap.offsetTop + wrap.offsetHeight + 4}px`;
+        pop.hidden = false;
+      }
+      function chooseMention(index) {
+        const item = popItems[index]; if (!item || !popRange) return;
+        const { start, end } = popRange;
+        notes.value = notes.value.slice(0, start) + item.insert + notes.value.slice(end);
+        const caret = start + item.insert.length; notes.setSelectionRange(caret, caret); notes.focus();
+        closePop(); onNotesChanged();
+      }
+      notes.addEventListener('input', () => { onNotesChanged(); updatePop(); });
+      notes.addEventListener('click', updatePop);
+      notes.addEventListener('blur', () => setTimeout(closePop, 120));
+      notes.addEventListener('keydown', (event) => {
+        if (pop.hidden) return;
+        if (event.key === 'ArrowDown') { event.preventDefault(); popIndex = (popIndex + 1) % popItems.length; drawPop(); }
+        else if (event.key === 'ArrowUp') { event.preventDefault(); popIndex = (popIndex - 1 + popItems.length) % popItems.length; drawPop(); }
+        else if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); chooseMention(popIndex); }
+        else if (event.key === 'Escape') { event.preventDefault(); closePop(); }
+      });
+      $('mentionDoc').addEventListener('click', () => {
+        const rec = docs.find(d => d.id === state.doc); if (!rec) return;
+        const insert = `@${rec.name}${pdfDoc ? ` стр. ${pdfPage}` : ''} `;
+        const needsSpace = notes.value && !/\s$/.test(notes.value);
+        notes.value += (needsSpace ? ' ' : '') + insert;
+        onNotesChanged(); notes.focus(); notes.setSelectionRange(notes.value.length, notes.value.length);
+        notes.scrollTop = notes.scrollHeight; toast('Упоминание добавлено в заметки');
+      });
+
+      /* ---------- Музыка ---------- */
+      const audio=$('audio');
+      function selectStation(index, autoplay=false) { state.station=(index+stations.length)%stations.length;const wasPlaying=!audio.paused;audio.pause();audio.src=stations[state.station].url;audio.load();renderStation();persist();if(autoplay||wasPlaying)playAudio(); }
+      async function playAudio() { if(!audio.src) audio.src=stations[state.station].url;try{await audio.play();$('musicIcon').innerHTML='<path d="M7 5.5h3.5v13H7zm6.5 0H17v13h-3.5z"/>';$('musicButton').setAttribute('aria-label','Поставить музыку на паузу');$('equalizer').classList.add('playing');$('equalizer').setAttribute('aria-label','Музыка играет')}catch{$('equalizer').classList.remove('playing');toast('Не удалось подключиться к эфиру. Попробуй другую станцию.')} }
+      function pauseAudio() { audio.pause();$('musicIcon').innerHTML='<path d="m8 5.5 11 6.5-11 6.5v-13Z"/>';$('musicButton').setAttribute('aria-label','Слушать музыку');$('equalizer').classList.remove('playing');$('equalizer').setAttribute('aria-label','Воспроизведение остановлено'); }
+      $('musicButton').addEventListener('click',()=>audio.paused?playAudio():pauseAudio());
+      $('previousStation').addEventListener('click',()=>selectStation(state.station-1,true)); $('nextStation').addEventListener('click',()=>selectStation(state.station+1,true));
+      stations.forEach((station,index)=>{const option=document.createElement('option');option.value=index;option.textContent=`${station.name} · ${station.mood}`;$('stationSelect').append(option)});
+      $('stationSelect').addEventListener('change',()=>selectStation(Number($('stationSelect').value),!audio.paused));
+      $('volume').value=state.volume??.55;audio.volume=Number($('volume').value);$('volume').addEventListener('input',()=>{audio.volume=Number($('volume').value);state.volume=audio.volume;$('volumeValue').textContent=`${Math.round(audio.volume*100)} процентов`;persist()});audio.addEventListener('error',()=>{pauseAudio();toast('Эфир временно недоступен')});
+
+      /* ---------- YouTube и Spotify ---------- */
+      const sourceInfo = {
+        radio: { sub: 'эфиры SomaFM для работы' },
+        youtube: { sub: 'видео и плейлисты по ссылке', placeholder: 'Ссылка на видео или плейлист YouTube', bad: 'Не похоже на ссылку YouTube или Spotify.' },
+        spotify: { sub: 'треки, альбомы и плейлисты по ссылке', placeholder: 'Ссылка на трек, альбом или плейлист Spotify', bad: 'Не похоже на ссылку Spotify или YouTube.' }
+      };
+      const spotifyKinds = { track: 'трек', album: 'альбом', playlist: 'плейлист', artist: 'исполнитель', episode: 'эпизод', show: 'подкаст' };
+      function parseYouTube(input) {
+        let url; try { url = new URL(input.trim()); } catch { return null; }
+        const host = url.hostname.replace(/^(www\.|m\.|music\.)/, '');
+        let video = null; const list = url.searchParams.get('list');
+        if (host === 'youtu.be') video = url.pathname.slice(1).split('/')[0];
+        else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+          if (url.pathname === '/watch') video = url.searchParams.get('v');
+          else { const m = /^\/(shorts|embed|live|v)\/([\w-]{6,})/.exec(url.pathname); if (m && m[2] !== 'videoseries') video = m[2]; }
+        } else return null;
+        if (video && !/^[\w-]{6,}$/.test(video)) video = null;
+        const cleanList = list && /^[\w-]+$/.test(list) ? list : null;
+        if (!video && !cleanList) return null;
+        return { source: 'youtube', video, list: cleanList, id: `youtube:${video || ''}|${cleanList || ''}` };
+      }
+      function parseSpotify(input) {
+        const text = input.trim();
+        let m = /^spotify:(track|album|playlist|artist|episode|show):([A-Za-z0-9]+)/.exec(text);
+        if (!m) {
+          try {
+            const url = new URL(text);
+            if (url.hostname !== 'open.spotify.com') return null;
+            m = /^\/(?:intl-[a-z-]+\/)?(?:embed\/)?(track|album|playlist|artist|episode|show)\/([A-Za-z0-9]+)/.exec(url.pathname);
+          } catch { return null; }
+        }
+        if (!m) return null;
+        return { source: 'spotify', type: m[1], sid: m[2], id: `spotify:${m[1]}:${m[2]}` };
+      }
+      function openUrl(item) {
+        if (item.source === 'spotify') return `https://open.spotify.com/${item.type}/${item.sid}`;
+        if (item.video) return `https://www.youtube.com/watch?v=${item.video}${item.list ? `&list=${item.list}` : ''}`;
+        return `https://www.youtube.com/playlist?list=${item.list}`;
+      }
+      function embedUrl(item, autoplay) {
+        if (item.source === 'spotify') return `https://open.spotify.com/embed/${item.type}/${item.sid}?utm_source=generator`;
+        const flags = `rel=0&playsinline=1&autoplay=${autoplay ? 1 : 0}`;
+        if (item.video) return `https://www.youtube-nocookie.com/embed/${item.video}?${item.list ? `list=${item.list}&` : ''}${flags}`;
+        return `https://www.youtube-nocookie.com/embed/videoseries?list=${item.list}&${flags}`;
+      }
+      function defaultTitle(item) {
+        if (item.source === 'spotify') return `Spotify · ${spotifyKinds[item.type] || 'ссылка'}`;
+        return item.video ? (item.list ? 'YouTube · видео из плейлиста' : 'YouTube · видео') : 'YouTube · плейлист';
+      }
+      const currentItem = () => state.library.find(i => i.id === state.nowPlaying[state.source]);
+      function clearEmbed() { $('embedStage').replaceChildren(); }
+      function showEmbed(item, autoplay) {
+        const stageEl = $('embedStage'); stageEl.replaceChildren();
+        const frame = document.createElement('iframe');
+        frame.className = `embed-frame${item.source === 'youtube' ? ' yt' : ''}`;
+        frame.src = embedUrl(item, autoplay); frame.title = item.title || defaultTitle(item);
+        frame.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write';
+        frame.referrerPolicy = 'strict-origin-when-cross-origin'; frame.setAttribute('allowfullscreen', '');
+        if (item.source === 'spotify') {
+          frame.classList.add('sp');
+          if (!['track', 'episode'].includes(item.type)) frame.classList.add('tall');
+          frame.classList.toggle('xl', !!state.spotifyBig);
+        }
+        const link = document.createElement('a'); link.className = 'embed-open'; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.href = openUrl(item);
+        link.textContent = item.source === 'spotify' ? 'Открыть в Spotify ↗' : 'Открыть на YouTube ↗';
+        const actions = document.createElement('div'); actions.className = 'embed-actions'; actions.append(link);
+        if (item.source === 'spotify') {
+          const size = document.createElement('button'); size.type = 'button'; size.className = 'text-button embed-size';
+          const label = () => { size.textContent = state.spotifyBig ? 'Уменьшить плеер' : 'Увеличить плеер'; };
+          label();
+          size.addEventListener('click', () => { state.spotifyBig = !state.spotifyBig; frame.classList.toggle('xl', state.spotifyBig); label(); persist(); });
+          actions.append(size);
+        }
+        stageEl.append(frame, actions);
+      }
+      function renderEmbedList() {
+        const listEl = $('embedList'); listEl.replaceChildren();
+        const items = state.library.filter(i => i.source === state.source);
+        if (!items.length) {
+          const empty = document.createElement('div'); empty.className = 'embed-empty';
+          empty.textContent = state.source === 'spotify' ? 'Список пуст. Скопируй ссылку на трек или плейлист в Spotify («Поделиться → Копировать ссылку») и вставь выше.' : 'Список пуст. Вставь ссылку на видео или плейлист — он сохранится здесь.';
+          listEl.append(empty); return;
+        }
+        items.forEach(item => {
+          const row = document.createElement('div'); row.className = `embed-row${state.nowPlaying[item.source] === item.id ? ' active' : ''}`;
+          const pick = document.createElement('button'); pick.type = 'button'; pick.className = 'embed-pick'; pick.textContent = item.title || defaultTitle(item); pick.title = item.title || defaultTitle(item);
+          pick.addEventListener('click', () => { state.nowPlaying[item.source] = item.id; persist(); showEmbed(item, true); renderEmbedList(); });
+          const del = document.createElement('button'); del.type = 'button'; del.className = 'embed-del'; del.textContent = '×'; del.title = 'Убрать из списка'; del.setAttribute('aria-label', `Убрать из списка: ${item.title || defaultTitle(item)}`);
+          del.addEventListener('click', () => {
+            state.library = state.library.filter(i => i.id !== item.id);
+            if (state.nowPlaying[item.source] === item.id) { delete state.nowPlaying[item.source]; clearEmbed(); }
+            persist(); renderEmbedList();
+          });
+          row.append(pick, del); listEl.append(row);
+        });
+      }
+      function setSource(src, opts = {}) {
+        state.source = src; persist();
+        document.querySelectorAll('.source-tab').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.source === src)));
+        $('radioPane').hidden = src !== 'radio'; $('embedPane').hidden = src === 'radio';
+        $('musicSub').textContent = sourceInfo[src].sub;
+        clearEmbed(); $('embedError').hidden = true;
+        if (src === 'radio') return;
+        if (!audio.paused) pauseAudio();
+        $('embedUrl').placeholder = sourceInfo[src].placeholder;
+        $('embedNote').textContent = src === 'youtube'
+          ? (location.protocol === 'file:' ? 'Сайт открыт как локальный файл — YouTube в таком случае может не показать плеер (ошибка 153). Открой сайт через локальный сервер или кнопкой «Открыть на YouTube».' : 'Вставь ссылку на видео или плейлист — плеер появится здесь.')
+          : 'Без входа в Spotify в плеере играют 30-секундные фрагменты. Войди в Spotify в этом браузере — тогда треки играют целиком.';
+        renderEmbedList();
+        const cur = currentItem(); if (cur) showEmbed(cur, false);
+      }
+      async function fetchTitle(item) {
+        const api = item.source === 'spotify' ? 'https://open.spotify.com/oembed?url=' : 'https://www.youtube.com/oembed?format=json&url=';
+        const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 6000);
+        try {
+          const response = await fetch(api + encodeURIComponent(openUrl(item)), { signal: controller.signal });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data?.title) { const saved = state.library.find(i => i.id === item.id); if (saved) { saved.title = String(data.title).slice(0, 90); persist(); renderEmbedList(); } }
+        } catch {} finally { clearTimeout(timer); }
+      }
+      $('embedForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const raw = $('embedUrl').value.trim(); if (!raw) return;
+        const item = parseYouTube(raw) || parseSpotify(raw);
+        if (!item) { $('embedError').textContent = sourceInfo[state.source].bad; $('embedError').hidden = false; return; }
+        $('embedError').hidden = true;
+        if (item.source !== state.source) setSource(item.source);
+        let saved = state.library.find(i => i.id === item.id);
+        if (!saved) { saved = { ...item, title: '' }; state.library.push(saved); fetchTitle(saved); }
+        state.nowPlaying[saved.source] = saved.id; persist();
+        renderEmbedList(); showEmbed(saved, true);
+        $('embedUrl').value = '';
+      });
+      document.querySelectorAll('.source-tab').forEach(tab => tab.addEventListener('click', () => setSource(tab.dataset.source)));
+
+      /* ---------- Настройки и навигация ---------- */
+      $('settingsButton').addEventListener('click',()=>{$('focusMinutes').value=state.durations.focus;$('shortMinutes').value=state.durations.short;$('longMinutes').value=state.durations.long;$('soundToggle').checked=state.sound!==false;$('settingsDialog').showModal()});
+      $('exportData').addEventListener('click',()=>{
+        const data=JSON.stringify({app:'stillroom',version:1,exported:new Date().toISOString(),state},null,2);
+        const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+        const link=document.createElement('a');link.href=url;link.download=`stillroom-${dayKey()}.json`;link.click();
+        setTimeout(()=>URL.revokeObjectURL(url),2000);toast('Копия сохранена. PDF в неё не входят');
+      });
+      $('importData').addEventListener('click',()=>$('importFile').click());
+      $('importFile').addEventListener('change',async()=>{
+        const file=$('importFile').files[0];$('importFile').value='';if(!file)return;
+        try{
+          const parsed=JSON.parse(await file.text());const incoming=parsed?.state;
+          if(parsed?.app!=='stillroom'||!incoming||typeof incoming!=='object')throw new Error('format');
+          if(!confirm('Заменить текущие задачи, заметки и статистику данными из файла?'))return;
+          ['durations','completedCycles','todayFocus','date','tasks','selectedTask','notes','station','volume','theme','docPages','source','library','nowPlaying','spotifyBig','history','sound'].forEach(key=>{if(key in incoming)state[key]=incoming[key]});
+          const du=state.durations;
+          if(!['focus','short','long'].every(k=>Number.isInteger(du?.[k])&&du[k]>=1&&du[k]<=90))state.durations={...defaults.durations};
+          state.running=false;state.endsAt=null;state.remaining=state.durations[state.mode]*60;
+          persist();location.reload();
+        }catch{toast('Не удалось прочитать файл копии')}
+      });
+      $('closeSettings').addEventListener('click',()=>$('settingsDialog').close());$('cancelSettings').addEventListener('click',()=>$('settingsDialog').close());
+      $('saveSettings').addEventListener('click',()=>{const values={focus:Number($('focusMinutes').value),short:Number($('shortMinutes').value),long:Number($('longMinutes').value)};if(Object.values(values).some(value=>!Number.isInteger(value)||value<1)){toast('Укажи длительность от 1 минуты');return}state.durations=values;state.sound=$('soundToggle').checked;state.running=false;state.endsAt=null;state.remaining=state.durations[state.mode]*60;render();persist();$('settingsDialog').close();toast('Ритм обновлён')});
+      document.querySelectorAll('[data-scroll]').forEach(button=>button.addEventListener('click',()=>{document.getElementById(button.dataset.scroll)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:button.dataset.scroll==='docs'?'start':'center'});document.querySelectorAll('.rail-button').forEach(item=>item.classList.toggle('active',item===button))}));
+      document.addEventListener('keydown',event=>{
+        const active=document.activeElement;
+        if(event.code==='Space'&&!['TEXTAREA','INPUT','BUTTON','SELECT'].includes(active.tagName)&&!active.closest?.('#docs')&&!$('settingsDialog').open){event.preventDefault();startPause()}
+      });
+
+      /* ---------- Запуск ---------- */
+      applyTheme(); renderDate(); render(); renderDocList(); renderMentions(); closeViewer(); setSource(state.source);
+      openDb().then(dbAll).then(records => {
+        docs = (records || []).sort((a, b) => a.added - b.added);
+        renderDocList(); renderMentions();
+        if (state.doc && docs.some(d => d.id === state.doc)) openDoc(state.doc);
+        else if (state.doc) { state.doc = null; persist(); }
+      }).catch(() => { renderDocList(); });
+      setInterval(()=>{if(!state.running)return;state.remaining=Math.max(0,Math.ceil((state.endsAt-Date.now())/1000));if(state.remaining===0)finishSession();else renderTimer();},250);
+    })();
+  </script>
+</body>
+</html>
